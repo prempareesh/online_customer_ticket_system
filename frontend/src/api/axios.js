@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:8000/api', // Backend base URL
+    baseURL: `${import.meta.env.VITE_API_URL}/api`, // Backend base URL
 });
 
 // Request interceptor for adding the bearer token
