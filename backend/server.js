@@ -12,11 +12,20 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "https://customer-support-system-rho.vercel.app",
-        "https://customer-support-system-git-main-prempareesh798-9343s-projects.vercel.app"
-    ],
+    origin: function (origin, callback) {
+        const allowedOrigins = [
+            "http://localhost:5173",
+            "https://customer-support-system-rho.vercel.app",
+            "https://customer-support-system-git-main-prempareesh798-9343s-projects.vercel.app"
+        ];
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -43,7 +52,7 @@ app.use('/api/admin', adminRoutes);
 
 // Test Route
 app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'UP', message: 'TickFlow API is running!' });
+    res.status(200).json({ status: 'UP', version: '1.0.1', message: 'TickFlow API is running!' });
 });
 
 // Global Error Handler
