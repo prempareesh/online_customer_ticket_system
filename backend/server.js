@@ -12,11 +12,10 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "https://customer-support-system-rho.vercel.app",
-        "https://customer-support-system-git-main-prempareesh798-9343s-projects.vercel.app"
-    ],
+    origin: function (origin, callback) {
+        // Dynamically allow the requesting origin to bypass strict matching issues
+        callback(null, true);
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
