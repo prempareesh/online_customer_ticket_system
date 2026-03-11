@@ -10,7 +10,7 @@ const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
-// Middleware
+// 1. CORS MUST BE FIRST
 app.use(cors({
     origin: [
         "https://customer-support-system-rho.vercel.app",
@@ -22,7 +22,7 @@ app.use(cors({
     credentials: true
 }));
 
-app.options("*", cors()); // Enable pre-flight for all routes
+app.options("*", cors()); // Explicitly handle preflight for ALL routes
 
 app.use(express.json());
 app.use(helmet({ crossOriginResourcePolicy: false })); // allows image loading
@@ -45,7 +45,12 @@ app.use('/api/admin', adminRoutes);
 
 // Test Route
 app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'UP', version: '1.0.3', message: 'TickFlow API is running!' });
+    res.status(200).json({
+        status: 'UP',
+        version: '1.0.4-FINAL',
+        timestamp: new Date().toISOString(),
+        message: 'TickFlow API is running!'
+    });
 });
 
 // Global Error Handler
