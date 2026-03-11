@@ -20,7 +20,6 @@ const messageSchema = Joi.object({
 exports.createTicket = async (req, res, next) => {
     try {
         const { title, category, description, priority } = req.body;
-
         let original_filename = null;
         if (req.file) {
             original_filename = req.file.path;
@@ -31,258 +30,176 @@ exports.createTicket = async (req, res, next) => {
             return res.status(400).json({ success: false, message: error.details[0].message });
         }
 
-        const [result] = await db.execute(
-            'INSERT INTO Tickets (user_id, title, category, description, priority, original_filename) VALUES (?, ?, ?, ?, ?, ?)',
-            [req.user.user_id, title, category, description, priority || 'Low', original_filename]
-        );
+        const newTicketRef = db.collection('Tickets').doc();
+        const ticketId = newTicketRef.id;
 
-        res.status(201).json({
-            success: true,
-            ticketId: result.insertId,
-            message: 'Ticket created successfully'
+        await newTicketRef.set({
+            ticket_id: ticketId,
+            user_id: req.user.user_id,
+            user_college: req.user.college, // Save college directly on ticket to avoid joins
+            title,
+            category,
+            description,
+            priority: priority || 'Low',
+            original_filename,
+            status: 'Open',
+            is_deleted: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
         });
-    } catch (err) {
-        next(err);
-    }
+
+        res.status(201).json({ success: true, ticketId, message: 'Ticket created successfully' });
+    } catch (err) { next(err); }
 };
 
 exports.getTickets = async (req, res, next) => {
     try {
-        let query = `
-            SELECT t.*, u.college 
-            FROM Tickets t
-            JOIN Users u ON t.user_id = u.user_id
-            WHERE t.is_deleted = FALSE
-        `;
-        let params = [];
+        let query = db.collection('Tickets').where('is_deleted', '==', false);
 
-        // If customer, only show their tickets
         if (req.user.role === 'customer') {
-            query += ' AND t.user_id = ?';
-            params.push(req.user.user_id);
+            query = query.where('user_id', '==', req.user.user_id);
         } else if (req.user.role === 'admin' && req.user.college) {
-            // Admin constrained to their own organization
-            query += ' AND u.college = ?';
-            params.push(req.user.college);
+            query = query.where('user_college', '==', req.user.college);
         }
 
-        query += ' ORDER BY t.created_at DESC';
+        const snapshot = await query.get();
+        let tickets = [];
+        snapshot.forEach(doc => tickets.push(doc.data()));
 
-        const [tickets] = await db.execute(query, params);
+        // Sort descending by created_at (most recent first)
+        tickets.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        res.status(200).json({
-            success: true,
-            count: tickets.length,
-            data: tickets
-        });
-    } catch (err) {
-        next(err);
-    }
+        // Format to what frontend expects
+        const data = tickets.map(t => ({ ...t, college: t.user_college }));
+        res.status(200).json({ success: true, count: data.length, data });
+    } catch (err) { next(err); }
 };
 
 exports.getTicketById = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const ticketRef = db.collection('Tickets').doc(id);
+        const doc = await ticketRef.get();
 
-        let query = `
-            SELECT t.*, u.college 
-            FROM Tickets t
-            JOIN Users u ON t.user_id = u.user_id
-            WHERE t.ticket_id = ? AND t.is_deleted = FALSE
-        `;
-        let params = [id];
-
-        // Customers can only see their own tickets
-        if (req.user.role === 'customer') {
-            query += ' AND t.user_id = ?';
-            params.push(req.user.user_id);
-        } else if (req.user.role === 'admin' && req.user.college) {
-            query += ' AND u.college = ?';
-            params.push(req.user.college);
-        }
-
-        const [tickets] = await db.execute(query, params);
-
-        if (tickets.length === 0) {
+        if (!doc.exists || doc.data().is_deleted) {
             return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
         }
 
-        res.status(200).json({
-            success: true,
-            data: tickets[0]
-        });
-    } catch (err) {
-        next(err);
-    }
+        const ticket = doc.data();
+
+        if (req.user.role === 'customer' && ticket.user_id !== req.user.user_id) {
+            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
+        } else if (req.user.role === 'admin' && req.user.college && ticket.user_college !== req.user.college) {
+            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
+        }
+
+        res.status(200).json({ success: true, data: { ...ticket, college: ticket.user_college } });
+    } catch (err) { next(err); }
 };
 
 exports.updateTicketStatus = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { error } = statusSchema.validate(req.body);
+        if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
-        if (error) {
-            return res.status(400).json({ success: false, message: error.details[0].message });
-        }
+        const ticketRef = db.collection('Tickets').doc(id);
+        const doc = await ticketRef.get();
 
-        // Validate access before updating
-        let checkQuery = 'SELECT t.*, u.college FROM Tickets t JOIN Users u ON t.user_id = u.user_id WHERE t.ticket_id = ? AND t.is_deleted = FALSE';
-        let checkParams = [id];
-
-        if (req.user.role === 'admin' && req.user.college) {
-            checkQuery += ' AND u.college = ?';
-            checkParams.push(req.user.college);
-        }
-
-        const [tickets] = await db.execute(checkQuery, checkParams);
-        if (tickets.length === 0) {
+        if (!doc.exists || doc.data().is_deleted) {
             return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
         }
 
-        // Update
-        const [result] = await db.execute(
-            'UPDATE Tickets SET status = ? WHERE ticket_id = ? AND is_deleted = FALSE',
-            [req.body.status, id]
-        );
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Failed to update.' });
+        const ticket = doc.data();
+        if (req.user.role === 'admin' && req.user.college && ticket.user_college !== req.user.college) {
+            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
         }
 
-        res.status(200).json({
-            success: true,
-            message: 'Ticket status updated'
-        });
-    } catch (err) {
-        next(err);
-    }
+        await ticketRef.update({ status: req.body.status, updated_at: new Date().toISOString() });
+        res.status(200).json({ success: true, message: 'Ticket status updated' });
+    } catch (err) { next(err); }
 };
 
 exports.addMessage = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { error } = messageSchema.validate(req.body);
+        if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
-        if (error) {
-            return res.status(400).json({ success: false, message: error.details[0].message });
-        }
+        const ticketRef = db.collection('Tickets').doc(id);
+        const doc = await ticketRef.get();
 
-        // Check if ticket exists and user has access
-        let query = `
-            SELECT t.*, u.college 
-            FROM Tickets t
-            JOIN Users u ON t.user_id = u.user_id 
-            WHERE t.ticket_id = ? AND t.is_deleted = FALSE
-        `;
-        let params = [id];
-
-        if (req.user.role === 'customer') {
-            query += ' AND t.user_id = ?';
-            params.push(req.user.user_id);
-        } else if (req.user.role === 'admin' && req.user.college) {
-            query += ' AND u.college = ?';
-            params.push(req.user.college);
-        }
-
-        const [tickets] = await db.execute(query, params);
-
-        if (tickets.length === 0) {
+        if (!doc.exists || doc.data().is_deleted) {
             return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
         }
 
-        // Insert message
-        await db.execute(
-            'INSERT INTO TicketMessages (ticket_id, sender_id, message) VALUES (?, ?, ?)',
-            [id, req.user.user_id, req.body.message]
-        );
+        const ticket = doc.data();
+        if (req.user.role === 'customer' && ticket.user_id !== req.user.user_id) {
+            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
+        } else if (req.user.role === 'admin' && req.user.college && ticket.user_college !== req.user.college) {
+            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
+        }
 
-        res.status(201).json({
-            success: true,
-            message: 'Message added successfully'
+        const newMessageRef = db.collection('TicketMessages').doc();
+        await newMessageRef.set({
+            message_id: newMessageRef.id,
+            ticket_id: id,
+            sender_id: req.user.user_id,
+            sender_name: req.user.name,
+            sender_role: req.user.role,
+            message: req.body.message,
+            timestamp: new Date().toISOString()
         });
-    } catch (err) {
-        next(err);
-    }
+
+        res.status(201).json({ success: true, message: 'Message added successfully' });
+    } catch (err) { next(err); }
 };
 
 exports.getMessages = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const ticketRef = db.collection('Tickets').doc(id);
+        const doc = await ticketRef.get();
 
-        // Verify ticket access
-        let ticketQuery = `
-            SELECT t.*, u.college 
-            FROM Tickets t
-            JOIN Users u ON t.user_id = u.user_id 
-            WHERE t.ticket_id = ? AND t.is_deleted = FALSE
-        `;
-        let ticketParams = [id];
-
-        if (req.user.role === 'customer') {
-            ticketQuery += ' AND t.user_id = ?';
-            ticketParams.push(req.user.user_id);
-        } else if (req.user.role === 'admin' && req.user.college) {
-            ticketQuery += ' AND u.college = ?';
-            ticketParams.push(req.user.college);
-        }
-
-        const [tickets] = await db.execute(ticketQuery, ticketParams);
-
-        if (tickets.length === 0) {
+        if (!doc.exists || doc.data().is_deleted) {
             return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
         }
 
-        // Get messages with sender info
-        const [messages] = await db.execute(`
-            SELECT m.*, u.name as sender_name, u.role as sender_role 
-            FROM TicketMessages m
-            JOIN Users u ON m.sender_id = u.user_id
-            WHERE m.ticket_id = ?
-            ORDER BY m.timestamp ASC
-        `, [id]);
+        const ticket = doc.data();
+        if (req.user.role === 'customer' && ticket.user_id !== req.user.user_id) {
+            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
+        } else if (req.user.role === 'admin' && req.user.college && ticket.user_college !== req.user.college) {
+            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
+        }
 
-        res.status(200).json({
-            success: true,
-            count: messages.length,
-            data: messages
-        });
-    } catch (err) {
-        next(err);
-    }
+        const snapshot = await db.collection('TicketMessages').where('ticket_id', '==', id).get();
+        let messages = [];
+        snapshot.forEach(msgDoc => messages.push(msgDoc.data()));
+
+        messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        res.status(200).json({ success: true, count: messages.length, data: messages });
+    } catch (err) { next(err); }
 };
 
 exports.deleteTicket = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const ticketRef = db.collection('Tickets').doc(id);
+        const doc = await ticketRef.get();
 
-        // Verify ticket access
-        let checkQuery = 'SELECT t.*, u.college FROM Tickets t JOIN Users u ON t.user_id = u.user_id WHERE t.ticket_id = ? AND t.is_deleted = FALSE';
-        let checkParams = [id];
-
-        if (req.user.role === 'customer') {
-            checkQuery += ' AND t.user_id = ?';
-            checkParams.push(req.user.user_id);
-        } else if (req.user.role === 'admin' && req.user.college) {
-            checkQuery += ' AND u.college = ?';
-            checkParams.push(req.user.college);
-        }
-
-        const [tickets] = await db.execute(checkQuery, checkParams);
-        if (tickets.length === 0) {
+        if (!doc.exists || doc.data().is_deleted) {
             return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
         }
 
-        const [result] = await db.execute('UPDATE Tickets SET is_deleted = TRUE WHERE ticket_id = ?', [id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Failed to delete.' });
+        const ticket = doc.data();
+        if (req.user.role === 'customer' && ticket.user_id !== req.user.user_id) {
+            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
+        } else if (req.user.role === 'admin' && req.user.college && ticket.user_college !== req.user.college) {
+            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
         }
 
-        res.status(200).json({
-            success: true,
-            message: 'Ticket deleted successfully (soft delete)'
-        });
-    } catch (err) {
-        next(err);
-    }
+        await ticketRef.update({ is_deleted: true, updated_at: new Date().toISOString() });
+        res.status(200).json({ success: true, message: 'Ticket deleted successfully (soft delete)' });
+    } catch (err) { next(err); }
 };

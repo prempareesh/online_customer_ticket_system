@@ -19,13 +19,14 @@ exports.protect = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         // Fetch user instance based on decoded id
-        const [users] = await db.execute('SELECT user_id, name, email, role, college FROM Users WHERE user_id = ?', [decoded.id]);
+        const userRef = db.collection('Users').doc(decoded.id);
+        const doc = await userRef.get();
 
-        if (users.length === 0) {
+        if (!doc.exists) {
             return res.status(401).json({ success: false, message: 'The user belonging to this token no longer exists.' });
         }
 
-        req.user = users[0];
+        req.user = doc.data();
         next();
     } catch (err) {
         return res.status(401).json({ success: false, message: 'Not authorized to access this route' });

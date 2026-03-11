@@ -34,8 +34,9 @@ exports.register = async (req, res, next) => {
         const { name, email, password, role = 'customer', college, registration_number } = req.body;
 
         // Check if user exists
-        const [existingUsers] = await db.execute('SELECT * FROM Users WHERE email = ?', [email]);
-        if (existingUsers.length > 0) {
+        const usersRef = db.collection('Users');
+        const snapshot = await usersRef.where('email', '==', email).get();
+        if (!snapshot.empty) {
             return res.status(400).json({ success: false, message: 'User already exists with this email.' });
         }
 
@@ -44,12 +45,21 @@ exports.register = async (req, res, next) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Insert new user
-        const [result] = await db.execute(
-            'INSERT INTO Users (name, email, password, role, college, registration_number) VALUES (?, ?, ?, ?, ?, ?)',
-            [name, email, hashedPassword, role, college, registration_number]
-        );
+        const newUserRef = usersRef.doc();
+        const newUserId = newUserRef.id;
 
-        const newUserId = result.insertId;
+        const userData = {
+            user_id: newUserId,
+            name,
+            email,
+            password: hashedPassword,
+            role,
+            college,
+            registration_number,
+            created_at: new Date()
+        };
+
+        await newUserRef.set(userData);
 
         // Generate token
         const token = generateToken(newUserId, role);
@@ -80,12 +90,14 @@ exports.login = async (req, res, next) => {
         const { email, password } = req.body;
 
         // Check for user
-        const [users] = await db.execute('SELECT * FROM Users WHERE email = ?', [email]);
-        if (users.length === 0) {
+        const usersRef = db.collection('Users');
+        const snapshot = await usersRef.where('email', '==', email).limit(1).get();
+        if (snapshot.empty) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
-        const user = users[0];
+        const userDoc = snapshot.docs[0];
+        const user = userDoc.data();
 
         // Check if password matches
         const isMatch = await bcrypt.compare(password, user.password);

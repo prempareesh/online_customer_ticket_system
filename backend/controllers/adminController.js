@@ -2,74 +2,98 @@ const db = require('../config/db');
 
 exports.getUsers = async (req, res, next) => {
     try {
-        let query = `
-            SELECT u.user_id, u.name, u.email, u.role, u.college, u.registration_number, u.created_at,
-            COUNT(t.ticket_id) as total_tickets
-            FROM Users u
-            LEFT JOIN Tickets t ON u.user_id = t.user_id
-            WHERE u.role = 'customer'
-        `;
-        const params = [];
-
+        let query = db.collection('Users').where('role', '==', 'customer');
         if (req.user.college) {
-            query += ' AND u.college = ?';
-            params.push(req.user.college);
+            query = query.where('college', '==', req.user.college);
         }
 
-        query += ' GROUP BY u.user_id ORDER BY u.created_at DESC';
+        const snapshot = await query.get();
+        let users = [];
 
-        const [users] = await db.execute(query, params);
-
-        res.status(200).json({
-            success: true,
-            count: users.length,
-            data: users
+        // We also need to get the ticket counts for each user
+        // We can do this by fetching tickets and grouping them
+        let ticketQuery = db.collection('Tickets').where('is_deleted', '==', false);
+        if (req.user.college) {
+            ticketQuery = ticketQuery.where('user_college', '==', req.user.college);
+        }
+        const ticketsSnapshot = await ticketQuery.get();
+        const ticketCounts = {};
+        ticketsSnapshot.forEach(doc => {
+            const t = doc.data();
+            ticketCounts[t.user_id] = (ticketCounts[t.user_id] || 0) + 1;
         });
-    } catch (err) {
-        next(err);
-    }
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            let createdAt = data.created_at;
+            if (createdAt && createdAt.toDate) createdAt = createdAt.toDate();
+            users.push({
+                user_id: data.user_id,
+                name: data.name,
+                email: data.email,
+                role: data.role,
+                college: data.college,
+                registration_number: data.registration_number,
+                created_at: createdAt,
+                total_tickets: ticketCounts[data.user_id] || 0
+            });
+        });
+
+        // Sort by created_at desc
+        users.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        res.status(200).json({ success: true, count: users.length, data: users });
+    } catch (err) { next(err); }
 };
 
 exports.getReports = async (req, res, next) => {
     try {
-        let userFilter = "SELECT COUNT(*) as count FROM Users WHERE role = 'customer'";
-        let ticketFilter = "SELECT COUNT(t.ticket_id) as count FROM Tickets t JOIN Users u ON t.user_id = u.user_id";
-        let statusFilter = "SELECT t.status, COUNT(t.ticket_id) as count FROM Tickets t JOIN Users u ON t.user_id = u.user_id";
-        let dailyFilter = `
-            SELECT DATE(t.created_at) as date, COUNT(t.ticket_id) as count 
-            FROM Tickets t JOIN Users u ON t.user_id = u.user_id
-        `;
-        const params = [];
+        let userQuery = db.collection('Users').where('role', '==', 'customer');
+        let ticketQuery = db.collection('Tickets');
 
         if (req.user.college) {
-            userFilter += " AND college = ?";
-            ticketFilter += " WHERE u.college = ?";
-            statusFilter += " WHERE u.college = ?";
-            dailyFilter += " WHERE u.college = ?";
-            params.push(req.user.college);
+            userQuery = userQuery.where('college', '==', req.user.college);
+            ticketQuery = ticketQuery.where('user_college', '==', req.user.college);
         }
 
-        statusFilter += " GROUP BY t.status";
-        dailyFilter += " GROUP BY DATE(t.created_at) ORDER BY date DESC LIMIT 7";
+        const userSnapshot = await userQuery.get();
+        const ticketSnapshot = await ticketQuery.get();
 
-        // Simple report stats for the system
-        const [totalUsers] = await db.execute(userFilter, req.user.college ? params : []);
-        const [totalTickets] = await db.execute(ticketFilter, req.user.college ? params : []);
-        const [statusStats] = await db.execute(statusFilter, req.user.college ? params : []);
+        const totalUsers = userSnapshot.size;
+        let totalTickets = 0;
 
-        // Tickets per day in the last 7 days (simplified)
-        const [dailyTickets] = await db.execute(dailyFilter, req.user.college ? params : []);
+        let statusCounts = {};
+        let dailyCountsMap = {};
+
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+
+        ticketSnapshot.forEach(doc => {
+            const t = doc.data();
+            totalTickets++;
+
+            // Status counts
+            statusCounts[t.status] = (statusCounts[t.status] || 0) + 1;
+
+            // Daily tickets
+            const createdDate = new Date(t.created_at);
+            if (createdDate >= sevenDaysAgo) {
+                const dateString = createdDate.toISOString().split('T')[0];
+                dailyCountsMap[dateString] = (dailyCountsMap[dateString] || 0) + 1;
+            }
+        });
+
+        const statusStats = Object.keys(statusCounts).map(k => ({ status: k, count: statusCounts[k] }));
+        const dailyTickets = Object.keys(dailyCountsMap).map(k => ({ date: k, count: dailyCountsMap[k] })).sort((a, b) => new Date(b.date) - new Date(a.date));
 
         res.status(200).json({
             success: true,
             data: {
-                totalUsers: totalUsers[0] ? totalUsers[0].count : 0,
-                totalTickets: totalTickets[0] ? totalTickets[0].count : 0,
-                statusStats: statusStats,
-                dailyTickets: dailyTickets
+                totalUsers,
+                totalTickets,
+                statusStats,
+                dailyTickets
             }
         });
-    } catch (err) {
-        next(err);
-    }
+    } catch (err) { next(err); }
 };
