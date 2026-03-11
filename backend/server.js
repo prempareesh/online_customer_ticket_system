@@ -12,14 +12,24 @@ const app = express();
 
 // 1. CORS MUST BE FIRST
 app.use(cors({
-    origin: [
-        "https://customer-support-system-rho.vercel.app",
-        "https://customer-support-system-git-main-prempareesh798-9343s-projects.vercel.app",
-        "http://localhost:5173"
-    ],
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        // Define allowed pattern: localhost or any vercel.app subdomain
+        const isAllowed = origin.includes('localhost') || origin.endsWith('.vercel.app');
+
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            console.log('CORS blocked origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true
+    credentials: true,
+    optionsSuccessStatus: 200
 }));
 
 app.options("*", cors()); // Explicitly handle preflight for ALL routes
@@ -47,7 +57,7 @@ app.use('/api/admin', adminRoutes);
 app.get('/api/health', (req, res) => {
     res.status(200).json({
         status: 'UP',
-        version: '1.0.4-FINAL',
+        version: '1.0.5-ULTRA',
         timestamp: new Date().toISOString(),
         message: 'TickFlow API is running!'
     });
