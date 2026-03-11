@@ -17,8 +17,10 @@ app.use(cors({
         "https://customer-support-system-rho.vercel.app",
         "https://customer-support-system-git-main-prempareesh798-9343s-projects.vercel.app"
     ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    optionsSuccessStatus: 200
 }));
 app.use(express.json());
 app.use(helmet({ crossOriginResourcePolicy: false })); // allows image loading
