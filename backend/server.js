@@ -10,6 +10,9 @@ const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
+// Trust proxy for Railway/Vercel (needed for express-rate-limit)
+app.set('trust proxy', 1);
+
 // BULLETPROOF CORS CONFIGURATION
 app.use(cors({
     origin: function (origin, callback) {
@@ -48,10 +51,10 @@ app.use('/api/admin', adminRoutes);
 app.get('/api/health', (req, res) => {
     res.status(200).json({
         status: 'UP',
-        version: '1.1.0-FIXED',
-        deployment_status: 'SUCCESSFUL',
+        version: '1.1.1-PRODUCTION',
+        trust_proxy: app.get('trust proxy'),
         timestamp: new Date().toISOString(),
-        message: 'TickFlow API is running with latest CORS fix!'
+        message: 'TickFlow API is LIVE with Firebase and CORS fix!'
     });
 });
 
