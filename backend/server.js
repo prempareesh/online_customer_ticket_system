@@ -11,12 +11,12 @@ const adminRoutes = require('./routes/adminRoutes');
 const app = express();
 
 // Middleware
-app.use(express.json());
 app.use(cors({
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
+app.use(express.json());
 app.use(helmet({ crossOriginResourcePolicy: false })); // allows image loading
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
