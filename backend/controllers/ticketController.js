@@ -1,4 +1,4 @@
-const db = require('../config/db');
+const db = require('../firebase');
 const Joi = require('joi');
 
 const ticketSchema = Joi.object({

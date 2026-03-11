@@ -1,4 +1,4 @@
-const db = require('../config/db');
+const db = require('../firebase');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');

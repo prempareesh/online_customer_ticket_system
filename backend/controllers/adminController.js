@@ -1,4 +1,4 @@
-const db = require('../config/db');
+const db = require('../firebase');
 
 exports.getUsers = async (req, res, next) => {
     try {
