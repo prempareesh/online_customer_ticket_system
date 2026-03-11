@@ -19,10 +19,11 @@ app.use(cors({
             "https://customer-support-system-git-main-prempareesh798-9343s-projects.vercel.app"
         ];
         // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+        // and allow all vercel.app subdomains for flexibility during deployments
+        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
             callback(null, true);
         } else {
+            console.log('CORS Blocked Origin:', origin);
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -52,7 +53,7 @@ app.use('/api/admin', adminRoutes);
 
 // Test Route
 app.get('/api/health', (req, res) => {
-    res.status(200).json({ status: 'UP', version: '1.0.1', message: 'TickFlow API is running!' });
+    res.status(200).json({ status: 'UP', version: '1.0.2', message: 'TickFlow API is running!' });
 });
 
 // Global Error Handler
