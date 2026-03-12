@@ -49,11 +49,8 @@ app.use('/api/admin', adminRoutes);
 // Test Route
 app.get('/api/health', (req, res) => {
     res.status(200).json({
-        status: 'UP',
-        version: '1.1.1-PRODUCTION',
-        trust_proxy: app.get('trust proxy'),
-        timestamp: new Date().toISOString(),
-        message: 'TickFlow API is LIVE with Firebase and CORS fix!'
+        status: "UP",
+        deployment_status: "SUCCESSFUL"
     });
 });
 
