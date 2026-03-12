@@ -26,7 +26,6 @@ app.use(cors({
     optionsSuccessStatus: 200
 }));
 
-app.options("*", cors()); // Handle preflight for ALL routes
 
 app.use(express.json());
 app.use(helmet({ crossOriginResourcePolicy: false })); // allows image loading
