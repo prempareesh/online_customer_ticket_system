@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: `${import.meta.env.VITE_API_URL}/api`, // Backend base URL
+    baseURL: 'https://online-customer-support-ticket-system-production.up.railway.app/api',
+    headers: {
+        'Content-Type': 'application/json'
+    }
 });
 
 // Request interceptor for adding the bearer token
