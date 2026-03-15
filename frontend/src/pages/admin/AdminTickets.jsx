@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { HiOutlineTicket } from 'react-icons/hi';
 import api from '../../api/axios';
@@ -33,7 +33,9 @@ const AdminTickets = () => {
         }
     };
 
-    const filteredTickets = tickets.filter(t => filter === 'All' ? true : t.status === filter);
+    const filteredTickets = React.useMemo(() => {
+        return tickets.filter(t => filter === 'All' ? true : t.status === filter);
+    }, [tickets, filter]);
 
     const getStatusBadgeOptions = (status) => {
         switch (status) {

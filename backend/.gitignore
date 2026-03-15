@@ -1,2 +1,6 @@
 ticket-ea3de-firebase-adminsdk-fbsvc-519df753fa.json
 firebase/
+.env
+node_modules/
+.DS_Store
+uploads/

@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { HiOutlineHome, HiOutlineTicket, HiOutlineUsers, HiOutlineChartBar, HiOutlineCog, HiOutlineLogout } from 'react-icons/hi';
 import { useContext } from 'react';
 import AuthContext from '../context/AuthContext';
@@ -6,6 +6,12 @@ import AuthContext from '../context/AuthContext';
 const AdminSidebar = () => {
     const { logout } = useContext(AuthContext);
     const location = useLocation();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
     const menuItems = [
         { name: 'Dashboard', path: '/admin', icon: HiOutlineHome },
@@ -49,7 +55,7 @@ const AdminSidebar = () => {
 
             <div className="p-4 border-t border-white/5">
                 <button
-                    onClick={logout}
+                    onClick={handleLogout}
                     className="flex w-full items-center gap-3 px-4 py-3 text-neutral-medium hover:text-accent-error hover:bg-accent-error/10 rounded-xl transition-all duration-200 border border-transparent hover:border-accent-error/20"
                 >
                     <HiOutlineLogout className="text-xl" />

@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { HiOutlinePlus, HiOutlineClock, HiOutlineCheckCircle, HiOutlineExclamationCircle, HiOutlineLogout } from 'react-icons/hi';
 import { Link, useNavigate } from 'react-router-dom';
-import { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import api from '../api/axios';
 import AuthContext from '../context/AuthContext';
 
@@ -46,11 +46,11 @@ const Dashboard = () => {
         }
     };
 
-    const stats = [
+    const stats = React.useMemo(() => [
         { label: 'Total Tickets', value: tickets.length, icon: HiOutlineClock, color: 'text-neutral-white', bg: 'bg-white/10' },
         { label: 'Open', value: tickets.filter(t => t.status === 'Open').length, icon: HiOutlineExclamationCircle, color: 'text-accent-warning', bg: 'bg-accent-warning/10' },
         { label: 'Resolved', value: tickets.filter(t => t.status === 'Resolved').length, icon: HiOutlineCheckCircle, color: 'text-accent-success', bg: 'bg-accent-success/10' },
-    ];
+    ], [tickets]);
 
     if (loading) {
         return <div className="flex-grow flex items-center justify-center text-white">Loading data...</div>;

@@ -16,7 +16,8 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://customer-support-system-git-main-prempareesh798-9343s-projects.vercel.app"
+    "https://customer-support-system-git-main-prempareesh798-9343s-projects.vercel.app",
+    "https://customer-support-system-rho.vercel.app"
 ];
 
 app.use(cors({
@@ -24,7 +25,11 @@ app.use(cors({
         // allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        const isAllowed = allowedOrigins.includes(origin) || 
+                         (origin && origin.endsWith('.vercel.app')) || 
+                         (origin && origin.startsWith('http://localhost:'));
+
+        if (isAllowed) {
             callback(null, true);
         } else {
             callback(new Error("CORS not allowed for this origin"));
@@ -35,10 +40,6 @@ app.use(cors({
     credentials: true,
     optionsSuccessStatus: 200
 }));
-
-// Handle preflight OPTIONS requests properly
-app.options("*", cors());
-
 
 app.use(express.json());
 app.use(helmet({ crossOriginResourcePolicy: false })); // allows image loading

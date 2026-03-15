@@ -1,4 +1,4 @@
-const db = require('../firebase');
+const { db, bucket } = require('../firebase');
 const Joi = require('joi');
 
 const ticketSchema = Joi.object({
@@ -22,7 +22,20 @@ exports.createTicket = async (req, res, next) => {
         const { title, category, description, priority } = req.body;
         let original_filename = null;
         if (req.file) {
-            original_filename = req.file.path;
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const filename = uniqueSuffix + '-' + req.file.originalname.replace(/\s+/g, '-');
+            const fileObj = bucket.file(`uploads/${filename}`);
+            
+            await fileObj.save(req.file.buffer, {
+                metadata: { contentType: req.file.mimetype }
+            });
+            
+            // Generate a long-lived signed URL for frontend access
+            const [url] = await fileObj.getSignedUrl({
+                action: 'read',
+                expires: '01-01-2100'
+            });
+            original_filename = url;
         }
 
         const { error } = ticketSchema.validate({ ...req.body, original_filename });
@@ -58,9 +71,8 @@ exports.getTickets = async (req, res, next) => {
 
         if (req.user.role === 'customer') {
             query = query.where('user_id', '==', req.user.user_id);
-        } else if (req.user.role === 'admin' && req.user.college) {
-            query = query.where('user_college', '==', req.user.college);
         }
+        // Admin sees all tickets
 
         const snapshot = await query.get();
         let tickets = [];
@@ -89,9 +101,8 @@ exports.getTicketById = async (req, res, next) => {
 
         if (req.user.role === 'customer' && ticket.user_id !== req.user.user_id) {
             return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
-        } else if (req.user.role === 'admin' && req.user.college && ticket.user_college !== req.user.college) {
-            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
         }
+        // Admin can access all tickets
 
         res.status(200).json({ success: true, data: { ...ticket, college: ticket.user_college } });
     } catch (err) { next(err); }
@@ -111,9 +122,7 @@ exports.updateTicketStatus = async (req, res, next) => {
         }
 
         const ticket = doc.data();
-        if (req.user.role === 'admin' && req.user.college && ticket.user_college !== req.user.college) {
-            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
-        }
+        // Admin can update all tickets
 
         await ticketRef.update({ status: req.body.status, updated_at: new Date().toISOString() });
         res.status(200).json({ success: true, message: 'Ticket status updated' });
@@ -136,9 +145,8 @@ exports.addMessage = async (req, res, next) => {
         const ticket = doc.data();
         if (req.user.role === 'customer' && ticket.user_id !== req.user.user_id) {
             return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
-        } else if (req.user.role === 'admin' && req.user.college && ticket.user_college !== req.user.college) {
-            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
         }
+        // Admin can access all tickets
 
         const newMessageRef = db.collection('TicketMessages').doc();
         await newMessageRef.set({
@@ -168,9 +176,8 @@ exports.getMessages = async (req, res, next) => {
         const ticket = doc.data();
         if (req.user.role === 'customer' && ticket.user_id !== req.user.user_id) {
             return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
-        } else if (req.user.role === 'admin' && req.user.college && ticket.user_college !== req.user.college) {
-            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
         }
+        // Admin can access all tickets
 
         const snapshot = await db.collection('TicketMessages').where('ticket_id', '==', id).get();
         let messages = [];
@@ -195,9 +202,8 @@ exports.deleteTicket = async (req, res, next) => {
         const ticket = doc.data();
         if (req.user.role === 'customer' && ticket.user_id !== req.user.user_id) {
             return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
-        } else if (req.user.role === 'admin' && req.user.college && ticket.user_college !== req.user.college) {
-            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
         }
+        // Admin can access all tickets
 
         await ticketRef.update({ is_deleted: true, updated_at: new Date().toISOString() });
         res.status(200).json({ success: true, message: 'Ticket deleted successfully (soft delete)' });

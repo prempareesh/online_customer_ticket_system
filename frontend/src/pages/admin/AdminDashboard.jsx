@@ -1,25 +1,26 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { HiOutlineTicket, HiOutlineUserGroup, HiOutlineClock, HiOutlineBan } from 'react-icons/hi';
 import api from '../../api/axios';
 
 const AdminDashboard = () => {
     const [tickets, setTickets] = useState([]);
-    const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, closed: 0 });
     const [loading, setLoading] = useState(true);
+
+    const stats = React.useMemo(() => {
+        return {
+            total: tickets.length,
+            open: tickets.filter(ticket => ticket.status === 'Open').length,
+            resolved: tickets.filter(ticket => ticket.status === 'Resolved').length,
+            closed: tickets.filter(ticket => ticket.status === 'Closed').length,
+        };
+    }, [tickets]);
 
     useEffect(() => {
         const fetchAllTickets = async () => {
             try {
                 const response = await api.get('/tickets');
-                const t = response.data.data;
-                setTickets(t);
-                setStats({
-                    total: t.length,
-                    open: t.filter(ticket => ticket.status === 'Open').length,
-                    resolved: t.filter(ticket => ticket.status === 'Resolved').length,
-                    closed: t.filter(ticket => ticket.status === 'Closed').length,
-                });
+                setTickets(response.data.data);
             } catch (err) {
                 console.error("Failed to fetch tickets", err);
             } finally {

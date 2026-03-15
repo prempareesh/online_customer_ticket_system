@@ -1,28 +1,26 @@
-const db = require('../firebase');
+const { db } = require('../firebase');
 
 exports.getUsers = async (req, res, next) => {
     try {
         let query = db.collection('Users').where('role', '==', 'customer');
-        if (req.user.college) {
-            query = query.where('college', '==', req.user.college);
-        }
-
-        const snapshot = await query.get();
-        let users = [];
+        // Admin sees all users
 
         // We also need to get the ticket counts for each user
         // We can do this by fetching tickets and grouping them
         let ticketQuery = db.collection('Tickets').where('is_deleted', '==', false);
-        if (req.user.college) {
-            ticketQuery = ticketQuery.where('user_college', '==', req.user.college);
-        }
-        const ticketsSnapshot = await ticketQuery.get();
+        // Admin sees all tickets
+        
+        const [snapshot, ticketsSnapshot] = await Promise.all([
+            query.get(),
+            ticketQuery.get()
+        ]);
         const ticketCounts = {};
         ticketsSnapshot.forEach(doc => {
             const t = doc.data();
             ticketCounts[t.user_id] = (ticketCounts[t.user_id] || 0) + 1;
         });
 
+        let users = [];
         snapshot.forEach(doc => {
             const data = doc.data();
             let createdAt = data.created_at;
@@ -50,14 +48,12 @@ exports.getReports = async (req, res, next) => {
     try {
         let userQuery = db.collection('Users').where('role', '==', 'customer');
         let ticketQuery = db.collection('Tickets');
+        // Admin sees all users and tickets
 
-        if (req.user.college) {
-            userQuery = userQuery.where('college', '==', req.user.college);
-            ticketQuery = ticketQuery.where('user_college', '==', req.user.college);
-        }
-
-        const userSnapshot = await userQuery.get();
-        const ticketSnapshot = await ticketQuery.get();
+        const [userSnapshot, ticketSnapshot] = await Promise.all([
+            userQuery.get(),
+            ticketQuery.get()
+        ]);
 
         const totalUsers = userSnapshot.size;
         let totalTickets = 0;

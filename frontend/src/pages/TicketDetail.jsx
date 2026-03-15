@@ -130,13 +130,13 @@ const TicketDetail = () => {
                         </h4>
                         <div className="bg-background-main/50 p-2 rounded-xl border border-white/5 inline-block">
                             <a
-                                href={`${import.meta.env.VITE_API_URL}/${ticket.original_filename}`}
+                                href={ticket.original_filename.startsWith('http') ? ticket.original_filename : `${import.meta.env.VITE_API_URL}/${ticket.original_filename}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="block overflow-hidden rounded-lg group relative"
                             >
                                 <img
-                                    src={`${import.meta.env.VITE_API_URL}/${ticket.original_filename}`}
+                                    src={ticket.original_filename.startsWith('http') ? ticket.original_filename : `${import.meta.env.VITE_API_URL}/${ticket.original_filename}`}
                                     alt="User Attachment"
                                     className="max-h-64 object-contain transition-transform duration-300 group-hover:scale-105"
                                     onError={(e) => {
