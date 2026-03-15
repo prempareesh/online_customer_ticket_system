@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -34,6 +35,15 @@ const UserLayout = ({ children }) => (
 );
 
 function App() {
+  // Hash Enforcer: If the user lands on a non-hash URL, redirect to the hash version
+  // This prevents 404s on Render when users bookmark or manually type URLs
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path !== '/' && !window.location.hash) {
+      window.location.replace(`/#${path}${window.location.search}`);
+    }
+  }, []);
+
   return (
     <Router>
       <AuthProvider>
