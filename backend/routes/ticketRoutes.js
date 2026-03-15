@@ -2,21 +2,12 @@ const express = require('express');
 const router = express.Router();
 const ticketController = require('../controllers/ticketController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
-const multer = require('multer');
-
-// Configure multer
-const storage = multer.memoryStorage();
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
-});
-
 // All ticket routes require authentication
 router.use(protect);
 
 // Route:  POST /api/tickets
-// Desc:   Create a new ticket with optional file upload
-router.post('/', upload.single('file'), ticketController.createTicket);
+// Desc:   Create a new ticket
+router.post('/', ticketController.createTicket);
 
 // Route:  GET /api/tickets
 // Desc:   Get all tickets for the logged in user (Customer) or ALL tickets (Admin)

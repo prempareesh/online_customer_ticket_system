@@ -1,4 +1,4 @@
-const { db, bucket } = require('../firebase');
+const { db } = require('../firebase');
 const Joi = require('joi');
 
 const ticketSchema = Joi.object({
@@ -19,37 +19,59 @@ const messageSchema = Joi.object({
 
 exports.createTicket = async (req, res) => {
   try {
+
     const { title, description, category, priority } = req.body;
 
-    if (!title || !description) {
-      return res.status(400).json({ message: "Missing required fields" });
+    if (!title || !description || !category) {
+      return res.status(400).json({
+        success:false,
+        message:"Missing required fields"
+      });
     }
 
-    const userId = req.user?.id || req.user?.uid || req.user?.user_id;
+    const userId =
+      req.user?.user_id ||
+      req.user?.uid ||
+      req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ message: "Unauthorized user" });
+      return res.status(401).json({
+        success:false,
+        message:"Unauthorized user"
+      });
     }
 
     const ticketRef = db.collection("Tickets").doc();
 
     const ticketData = {
       ticket_id: ticketRef.id,
-      customer_id: userId,
-      title,
-      description,
-      category,
-      priority,
+      user_id: userId,
+      title: title,
+      description: description,
+      category: category,
+      priority: priority || "Low",
       status: "Open",
-      created_at: new Date().toISOString()
+      is_deleted:false,
+      created_at: new Date().toISOString(),
+      updated_at: null
     };
 
     await ticketRef.set(ticketData);
 
-    res.status(201).json(ticketData);
+    return res.status(201).json({
+      success:true,
+      data:ticketData
+    });
+
   } catch (error) {
-    console.error("Create ticket error:", error);
-    res.status(500).json({ message: "Server error" });
+
+    console.error("Create Ticket Error:",error);
+
+    return res.status(500).json({
+      success:false,
+      message:"Internal server error"
+    });
+
   }
 };
 
@@ -87,8 +109,14 @@ exports.getTicketById = async (req, res, next) => {
 
         const ticket = doc.data();
 
-        if (req.user.role === 'customer' && ticket.user_id !== req.user.user_id) {
-            return res.status(404).json({ success: false, message: 'Ticket not found or access denied.' });
+        if (
+          req.user.role === "customer" &&
+          ticket.user_id !== req.user.user_id
+        ) {
+          return res.status(403).json({
+            success:false,
+            message:"Access denied"
+          });
         }
         // Admin can access all tickets
 

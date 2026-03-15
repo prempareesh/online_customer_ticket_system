@@ -23,15 +23,12 @@ try {
   }
 
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "ticket-ea3de.appspot.com"
+    credential: admin.credential.cert(serviceAccount)
   });
 } catch (error) {
   console.error("Firebase initialization failed:", error.message);
 }
 
 const db = admin.firestore();
-const bucket = admin.storage().bucket();
 
-module.exports = { db, bucket };
-
+module.exports = { db };
