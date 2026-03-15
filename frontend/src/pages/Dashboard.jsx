@@ -63,7 +63,7 @@ const Dashboard = () => {
                 <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-poppins font-bold text-white mb-1">Customer Dashboard</h1>
-                        {user.role === 'admin' && (
+                        {user?.role === 'admin' && (
                             <span className="px-3 py-1 bg-accent-error/20 text-accent-error text-xs font-bold rounded-full border border-accent-error/30 mt-1 uppercase">Admin View</span>
                         )}
                     </div>

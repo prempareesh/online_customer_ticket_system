@@ -14,7 +14,7 @@ const Navbar = () => {
         navigate('/login');
     };
 
-    const navLinks = user ? (user.role === 'admin' ? [
+    const navLinks = user ? (user?.role === 'admin' ? [
         { name: 'Admin Portal', path: '/admin' },
         { name: 'Help', path: '/help' },
     ] : [
@@ -51,7 +51,7 @@ const Navbar = () => {
 
                         {user ? (
                             <div className="flex items-center gap-4 ml-2 pl-2">
-                                <span className="text-neutral-light text-sm hidden lg:block">Hi, {user.name}</span>
+                                <span className="text-neutral-light text-sm hidden lg:block">Hi, {user?.name}</span>
                                 <button onClick={handleLogout} className="px-5 py-2 text-white font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm">
                                     Sign Out
                                 </button>

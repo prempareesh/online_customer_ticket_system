@@ -9,7 +9,7 @@ const AdminLayout = () => {
     if (loading) return <div className="h-screen flex items-center justify-center text-white">Loading...</div>;
 
     // Protect route: Rediect to login if not authenticated or not an admin
-    if (!user || user.role !== 'admin') {
+    if (!user || user?.role !== 'admin') {
         return <Navigate to="/login" />;
     }
 

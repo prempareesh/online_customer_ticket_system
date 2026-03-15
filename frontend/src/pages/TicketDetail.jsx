@@ -51,7 +51,7 @@ const TicketDetail = () => {
         if (!window.confirm('Are you sure you want to completely remove this ticket?')) return;
         try {
             await api.delete(`/tickets/${id}`);
-            navigate(user.role === 'admin' ? '/admin' : '/dashboard');
+            navigate(user?.role === 'admin' ? '/admin' : '/dashboard');
         } catch (err) {
             console.error('Failed to delete ticket', err);
         }
@@ -104,7 +104,7 @@ const TicketDetail = () => {
                     </p>
                 </div>
 
-                {user.role === 'admin' && (
+                {user?.role === 'admin' && (
                     <div className="flex flex-col gap-2 shrink-0">
                         {ticket.status !== 'Resolved' && ticket.status !== 'Closed' && (
                             <button onClick={handleMarkResolved} className="bg-accent-success/20 hover:bg-accent-success/30 text-accent-success border border-accent-success/30 px-4 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors">
@@ -174,7 +174,7 @@ const TicketDetail = () => {
                         </div>
                     ) : (
                         messages.map((msg) => {
-                            const isMe = msg.sender_id === user.id;
+                            const isMe = msg.sender_id === user?.id;
                             const isAdmin = msg.sender_role === 'admin';
 
                             return (
