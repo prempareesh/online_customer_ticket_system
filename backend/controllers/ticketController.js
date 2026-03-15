@@ -24,8 +24,8 @@ exports.createTicket = async (req, res) => {
 
     if (!title || !description || !category) {
       return res.status(400).json({
-        success:false,
-        message:"Missing required fields"
+        success: false,
+        message: "Missing required fields"
       });
     }
 
@@ -36,8 +36,8 @@ exports.createTicket = async (req, res) => {
 
     if (!userId) {
       return res.status(401).json({
-        success:false,
-        message:"Unauthorized user"
+        success: false,
+        message: "Unauthorized user"
       });
     }
 
@@ -51,7 +51,7 @@ exports.createTicket = async (req, res) => {
       category: category,
       priority: priority || "Low",
       status: "Open",
-      is_deleted:false,
+      is_deleted: false,
       created_at: new Date().toISOString(),
       updated_at: null
     };
@@ -59,17 +59,17 @@ exports.createTicket = async (req, res) => {
     await ticketRef.set(ticketData);
 
     return res.status(201).json({
-      success:true,
-      data:ticketData
+      success: true,
+      data: ticketData
     });
 
   } catch (error) {
 
-    console.error("Create Ticket Error:",error);
+    console.error("Create Ticket Error:", error);
 
     return res.status(500).json({
-      success:false,
-      message:"Internal server error"
+      success: false,
+      message: "Internal server error"
     });
 
   }
