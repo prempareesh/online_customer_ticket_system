@@ -16,6 +16,7 @@ const TicketDetail = () => {
     const [loading, setLoading] = useState(true);
 
     const fetchTicketData = async () => {
+        try {
             const [ticketRes, msgRes] = await Promise.all([
                 api.get(user.role === 'admin' ? `/admin/tickets/${id}` : `/tickets/${id}`),
                 api.get(`/tickets/${id}/messages`)
