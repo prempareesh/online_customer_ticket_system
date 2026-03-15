@@ -64,6 +64,7 @@ function App() {
               <Route path="ticket/:id" element={<TicketDetail />} />
             </Route>
 
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </AuthProvider>
