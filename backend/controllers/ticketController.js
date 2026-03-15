@@ -18,61 +18,66 @@ const messageSchema = Joi.object({
 });
 
 exports.createTicket = async (req, res) => {
-  try {
+try {
 
-    const { title, description, category, priority } = req.body;
+const body = req.body || {};
 
-    if (!title || !description || !category) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields"
-      });
-    }
+const title = body.title;
+const description = body.description;
+const category = body.category;
+const priority = body.priority;
 
-    const userId =
-      req.user?.user_id ||
-      req.user?.uid ||
-      req.user?.id;
+if (!title || !description || !category) {
+  return res.status(400).json({
+    success:false,
+    message:"Missing required fields"
+  });
+}
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized user"
-      });
-    }
+const userId =
+  req.user?.user_id ||
+  req.user?.uid ||
+  req.user?.id;
 
-    const ticketRef = db.collection("Tickets").doc();
+if (!userId) {
+  return res.status(401).json({
+    success:false,
+    message:"Unauthorized user"
+  });
+}
 
-    const ticketData = {
-      ticket_id: ticketRef.id,
-      user_id: userId,
-      title: title,
-      description: description,
-      category: category,
-      priority: priority || "Low",
-      status: "Open",
-      is_deleted: false,
-      created_at: new Date().toISOString(),
-      updated_at: null
-    };
+const ticketRef = db.collection("Tickets").doc();
 
-    await ticketRef.set(ticketData);
+const ticketData = {
+  ticket_id: ticketRef.id,
+  user_id: userId,
+  title: title,
+  description: description,
+  category: category,
+  priority: priority || "Low",
+  status: "Open",
+  is_deleted: false,
+  created_at: new Date().toISOString(),
+  updated_at: null
+};
 
-    return res.status(201).json({
-      success: true,
-      data: ticketData
-    });
+await ticketRef.set(ticketData);
 
-  } catch (error) {
+return res.status(201).json({
+  success:true,
+  data:ticketData
+});
 
-    console.error("Create Ticket Error:", error);
+} catch (error) {
 
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
+console.error("Create Ticket Error:", error);
 
-  }
+return res.status(500).json({
+  success:false,
+  message:"Internal server error"
+});
+
+}
 };
 
 exports.getTickets = async (req, res, next) => {

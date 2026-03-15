@@ -24,6 +24,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(helmet({ crossOriginResourcePolicy: false })); // allows image loading
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
