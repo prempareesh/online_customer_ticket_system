@@ -13,32 +13,14 @@ const app = express();
 // Trust proxy for Railway/Vercel (needed for express-rate-limit)
 app.set('trust proxy', 1);
 
-const allowedOrigins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://customer-support-system-git-main-prempareesh798-9343s-projects.vercel.app",
-    "https://customer-support-system-rho.vercel.app"
-];
-
 app.use(cors({
-    origin: function (origin, callback) {
-        // allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-
-        const isAllowed = allowedOrigins.includes(origin) || 
-                         (origin && origin.endsWith('.vercel.app')) || 
-                         (origin && origin.startsWith('http://localhost:'));
-
-        if (isAllowed) {
-            callback(null, true);
-        } else {
-            callback(new Error("CORS not allowed for this origin"));
-        }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-    optionsSuccessStatus: 200
+  origin: [
+    "https://ticket-system-frontend-tjth.onrender.com",
+    "http://localhost:5173"
+  ],
+  methods: ["GET","POST","PUT","DELETE","PATCH"],
+  allowedHeaders: ["Content-Type","Authorization"],
+  credentials: true
 }));
 
 app.use(express.json());
