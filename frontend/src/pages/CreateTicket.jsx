@@ -6,26 +6,14 @@ import api from '../api/axios';
 
 const CreateTicket = () => {
     const navigate = useNavigate();
-    const fileInputRef = useRef(null);
 
     const [title, setTitle] = useState('');
     const [category, setCategory] = useState('');
     const [priority, setPriority] = useState('Low');
     const [description, setDescription] = useState('');
-    const [file, setFile] = useState(null);
 
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
-
-    const handleFileChange = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
-        }
-    };
-
-    const triggerFileSelect = () => {
-        fileInputRef.current?.click();
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -33,19 +21,11 @@ const CreateTicket = () => {
         setErrorMsg('');
 
         try {
-            const formData = new FormData();
-            formData.append('title', title);
-            formData.append('category', category);
-            formData.append('priority', priority);
-            formData.append('description', description);
-            if (file) {
-                formData.append('file', file);
-            }
-
-            await api.post('/tickets', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
+            await api.post('/tickets', {
+                title,
+                category,
+                priority,
+                description
             });
             navigate('/dashboard');
         } catch (err) {
@@ -131,35 +111,6 @@ const CreateTicket = () => {
                                 className="w-full bg-background-input border border-white/10 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary transition-colors resize-none"
                                 placeholder="Please describe your issue in as much detail as possible..."
                             ></textarea>
-                        </div>
-
-                        <div className="col-span-1 md:col-span-2">
-                            <label className="block text-sm font-medium text-neutral-light mb-2">Attachments (Optional)</label>
-                            <input
-                                type="file"
-                                className="hidden"
-                                ref={fileInputRef}
-                                onChange={handleFileChange}
-                                accept="image/*,.pdf,.doc,.docx"
-                            />
-                            <div
-                                onClick={triggerFileSelect}
-                                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${file ? 'border-accent-primary bg-accent-primary/10' : 'border-white/20 hover:border-accent-primary/50 bg-background-input/50'}`}
-                            >
-                                {file ? (
-                                    <>
-                                        <HiDocumentAdd className="mx-auto text-3xl text-accent-primary mb-3" />
-                                        <p className="text-sm text-white font-medium">{file.name}</p>
-                                        <p className="text-xs text-neutral-medium mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB • Click to change file</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <HiOutlineClipboardList className="mx-auto text-3xl text-neutral-medium mb-3" />
-                                        <p className="text-sm text-neutral-light font-medium">Click to upload an image or document form file system</p>
-                                        <p className="text-xs text-neutral-medium mt-1">Max attachment size: 5MB</p>
-                                    </>
-                                )}
-                            </div>
                         </div>
                     </div>
 
