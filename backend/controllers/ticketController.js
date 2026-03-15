@@ -17,52 +17,40 @@ const messageSchema = Joi.object({
     message: Joi.string().required()
 });
 
-exports.createTicket = async (req, res, next) => {
-    try {
-        const { title, category, description, priority } = req.body;
-        let original_filename = null;
-        if (req.file) {
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            const filename = uniqueSuffix + '-' + req.file.originalname.replace(/\s+/g, '-');
-            const fileObj = bucket.file(`uploads/${filename}`);
-            
-            await fileObj.save(req.file.buffer, {
-                metadata: { contentType: req.file.mimetype }
-            });
-            
-            // Generate a long-lived signed URL for frontend access
-            const [url] = await fileObj.getSignedUrl({
-                action: 'read',
-                expires: '01-01-2100'
-            });
-            original_filename = url;
-        }
+exports.createTicket = async (req, res) => {
+  try {
+    const { title, description, category, priority } = req.body;
 
-        const { error } = ticketSchema.validate({ ...req.body, original_filename });
-        if (error) {
-            return res.status(400).json({ success: false, message: error.details[0].message });
-        }
+    if (!title || !description) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
 
-        const newTicketRef = db.collection('Tickets').doc();
-        const ticketId = newTicketRef.id;
+    const userId = req.user?.id || req.user?.uid || req.user?.user_id;
 
-        await newTicketRef.set({
-            ticket_id: ticketId,
-            user_id: req.user.user_id,
-            user_college: req.user.college, // Save college directly on ticket to avoid joins
-            title,
-            category,
-            description,
-            priority: priority || 'Low',
-            original_filename,
-            status: 'Open',
-            is_deleted: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        });
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized user" });
+    }
 
-        res.status(201).json({ success: true, ticketId, message: 'Ticket created successfully' });
-    } catch (err) { next(err); }
+    const ticketRef = db.collection("Tickets").doc();
+
+    const ticketData = {
+      ticket_id: ticketRef.id,
+      customer_id: userId,
+      title,
+      description,
+      category,
+      priority,
+      status: "Open",
+      created_at: new Date().toISOString()
+    };
+
+    await ticketRef.set(ticketData);
+
+    res.status(201).json(ticketData);
+  } catch (error) {
+    console.error("Create ticket error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
 exports.getTickets = async (req, res, next) => {

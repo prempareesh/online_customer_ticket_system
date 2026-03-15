@@ -93,3 +93,20 @@ exports.getReports = async (req, res, next) => {
         });
     } catch (err) { next(err); }
 };
+
+exports.getTicketById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const ticketDoc = await db.collection("Tickets").doc(id).get();
+
+    if (!ticketDoc.exists) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    res.json(ticketDoc.data());
+  } catch (error) {
+    console.error("Admin ticket fetch error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

@@ -15,4 +15,8 @@ router.get('/users', adminController.getUsers);
 // Desc:   Get platform reports and statistics
 router.get('/reports', adminController.getReports);
 
+// Route:  GET /api/admin/tickets/:id
+// Desc:   Fetch ticket details by ID for admin
+router.get("/tickets/:id", adminController.getTicketById);
+
 module.exports = router;
